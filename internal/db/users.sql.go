@@ -136,23 +136,46 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (InsertU
 	return i, err
 }
 
+const updatePassword = `-- name: UpdatePassword :one
+UPDATE users
+SET password_hash = $3, updated_at = now(), version = version + 1 WHERE user_pid = $1 AND version = $2
+RETURNING updated_at, version
+`
+
+type UpdatePasswordParams struct {
+	UserPid      int64
+	Version      int32
+	PasswordHash []byte
+}
+
+type UpdatePasswordRow struct {
+	UpdatedAt pgtype.Timestamptz
+	Version   int32
+}
+
+func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) (UpdatePasswordRow, error) {
+	row := q.db.QueryRow(ctx, updatePassword, arg.UserPid, arg.Version, arg.PasswordHash)
+	var i UpdatePasswordRow
+	err := row.Scan(&i.UpdatedAt, &i.Version)
+	return i, err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET username = $3, email = $4, name = $5, password_hash = $6, bio = $7, activated = $8, profile_pic = $9, updated_at = now(), version = version + 1
+SET username = $3, email = $4, name = $5, bio = $6, activated = $7, profile_pic = $8, updated_at = now(), version = version + 1
 WHERE user_pid = $1 AND version = $2
 RETURNING updated_at, version
 `
 
 type UpdateUserParams struct {
-	UserPid      int64
-	Version      int32
-	Username     string
-	Email        string
-	Name         pgtype.Text
-	PasswordHash []byte
-	Bio          pgtype.Text
-	Activated    bool
-	ProfilePic   pgtype.Text
+	UserPid    int64
+	Version    int32
+	Username   string
+	Email      string
+	Name       pgtype.Text
+	Bio        pgtype.Text
+	Activated  bool
+	ProfilePic pgtype.Text
 }
 
 type UpdateUserRow struct {
@@ -167,7 +190,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		arg.Username,
 		arg.Email,
 		arg.Name,
-		arg.PasswordHash,
 		arg.Bio,
 		arg.Activated,
 		arg.ProfilePic,

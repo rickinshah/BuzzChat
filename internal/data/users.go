@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -17,6 +18,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var AnonymousUser = &User{}
 
 type MarshalType uint8
 
@@ -47,6 +50,10 @@ func NewUser(user *db.User) *User {
 		User:        *user,
 		marshalType: Full,
 	}
+}
+
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
 
 func (u *User) MarshalJSON() ([]byte, error) {
@@ -152,6 +159,11 @@ func ValidateUsername(v *validator.Validator, username string) {
 	v.Check(validator.Matches(username, validator.UsernameRX), "username", "should only contain alphanumeric characters and underscore")
 }
 
+func ValidateUsernameOrEmail(v *validator.Validator, username string) {
+	v.Check(username != "", "username/email", "must be provided")
+	v.Check(validator.Matches(username, validator.UsernameEmailRX), "username/email", "is not valid")
+}
+
 func ValidateBio(v *validator.Validator, bio *pgtype.Text) {
 	if bio.Valid {
 		v.Check(len(bio.String) <= 300, "bio", "must not be more than 500 characters")
@@ -225,20 +237,48 @@ func (m UserModel) Insert(user *User) error {
 	return nil
 }
 
+func (m UserModel) UpdatePassword(user *User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	args := db.UpdatePasswordParams{
+		PasswordHash: user.PasswordHash,
+		UserPid:      user.UserPid,
+		Version:      user.Version,
+	}
+
+	row, err := m.DB.UpdatePassword(ctx, args)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	user.UpdatedAt = row.UpdatedAt
+	user.Version = row.Version
+
+	if err := m.SetCachedUser(user); err != nil {
+		logger.PrintInfo("failed to cache user:"+err.Error(), nil)
+	}
+
+	return nil
+}
+
 func (m UserModel) Update(user *User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	args := db.UpdateUserParams{
-		UserPid:      user.UserPid,
-		Username:     user.Username,
-		Email:        user.Email,
-		Name:         user.Name,
-		PasswordHash: user.PasswordHash,
-		Activated:    user.Activated,
-		Bio:          user.Bio,
-		ProfilePic:   user.ProfilePic,
-		Version:      user.Version,
+		UserPid:    user.UserPid,
+		Username:   user.Username,
+		Email:      user.Email,
+		Name:       user.Name,
+		Activated:  user.Activated,
+		Bio:        user.Bio,
+		ProfilePic: user.ProfilePic,
+		Version:    user.Version,
 	}
 	row, err := m.DB.UpdateUser(ctx, args)
 	if err != nil {
@@ -359,6 +399,10 @@ func (m UserModel) GetByToken(tokenScope, tokenPlaintext string) (*User, error) 
 
 	customUser := NewUser(&user)
 
+	if err = m.SetCachedUserByToken(tokenScope, tokenHash[:], customUser); err != nil {
+		logger.PrintInfo("failed to cache token:"+err.Error(), nil)
+	}
+
 	return customUser, nil
 }
 
@@ -394,5 +438,5 @@ func cacheKeyForUser(username string) string {
 }
 
 func cacheKeyForUserByToken(scope string, hash []byte) string {
-	return "token:" + scope + ":" + string(hash)
+	return "token:" + scope + ":" + hex.EncodeToString(hash)
 }

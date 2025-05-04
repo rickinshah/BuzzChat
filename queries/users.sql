@@ -15,8 +15,13 @@ WHERE email = $1 OR username = $1;
 
 -- name: UpdateUser :one
 UPDATE users
-SET username = $3, email = $4, name = $5, password_hash = $6, bio = $7, activated = $8, profile_pic = $9, updated_at = now(), version = version + 1
+SET username = $3, email = $4, name = $5, bio = $6, activated = $7, profile_pic = $8, updated_at = now(), version = version + 1
 WHERE user_pid = $1 AND version = $2
+RETURNING updated_at, version;
+
+-- name: UpdatePassword :one
+UPDATE users
+SET password_hash = $3, updated_at = now(), version = version + 1 WHERE user_pid = $1 AND version = $2
 RETURNING updated_at, version;
 
 -- name: InsertUser :one

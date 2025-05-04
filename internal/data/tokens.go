@@ -17,13 +17,19 @@ const (
 	ScopeAuthentication = "authentication"
 )
 
-func generateToken(userID int64, ttl time.Duration, scope string) (*db.Token, error) {
-	token := &db.Token{
-		UserID: userID,
-		Expiry: pgtype.Timestamptz{Time: time.Now().Add(ttl), Valid: true},
-		Scope:  scope,
-	}
+type Token struct {
+	db.Token
+	Plaintext string
+}
 
+func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
+	token := Token{
+		Token: db.Token{
+			UserID: userID,
+			Expiry: pgtype.Timestamptz{Time: time.Now().Add(ttl), Valid: true},
+			Scope:  scope,
+		},
+	}
 	randomBytes := make([]byte, 16)
 
 	_, err := rand.Read(randomBytes)
@@ -31,12 +37,12 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*db.Token, er
 		return nil, err
 	}
 
-	tokenPlaintext := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(randomBytes)
+	token.Plaintext = base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(randomBytes)
 
-	hash := sha256.Sum256([]byte(tokenPlaintext))
+	hash := sha256.Sum256([]byte(token.Plaintext))
 	token.Hash = hash[:]
 
-	return token, nil
+	return &token, nil
 }
 
 func ValidateTokenPlaintext(v *validator.Validator, tokenPlaintext string) {
@@ -49,7 +55,7 @@ type TokenModel struct {
 	Redis *redis.Client
 }
 
-func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*db.Token, error) {
+func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
 		return nil, err
@@ -58,7 +64,7 @@ func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*db.Toke
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	args := db.InsertTokenParams(*token)
+	args := db.InsertTokenParams(token.Token)
 	err = m.DB.InsertToken(ctx, args)
 	return token, err
 }

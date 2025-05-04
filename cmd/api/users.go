@@ -96,3 +96,12 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) getProfileHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.contextGetUser(r)
+	user.SetMarshalType(data.Self)
+
+	if err := app.writeJson(w, http.StatusOK, envelope{"user": user}, nil); err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
