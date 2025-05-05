@@ -64,11 +64,14 @@ export async function apiCall<T = unknown>({
             goto.set("/");
             triggerError(responseData.error)
         } else if (response.status === 422) {
-            console.log(responseData.error)
             triggerError(responseData.error)
         }
         else {
-            console.log(responseData.error);
+            if (onError) {
+                onError(responseData)
+            } else {
+                triggerError(responseData.error);
+            }
         }
 
     } catch (err) {

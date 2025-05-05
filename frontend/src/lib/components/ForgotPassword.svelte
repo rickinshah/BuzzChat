@@ -50,13 +50,13 @@
 		<form on:submit|preventDefault={handleSubmit} class="space-y-4">
 			<div>
 				<label for="username" class="block pb-0.5 pl-1 text-sm font-medium text-gray-300">
-					Username
+					Username/Email
 				</label>
 				<input
 					type="text"
 					id="username"
 					bind:value={formData.username}
-					placeholder="Enter your username"
+					placeholder="Username/Email"
 					class="w-full rounded-xl border border-gray-600 bg-gray-700 px-4 py-2 text-white shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-400 focus:outline-none"
 					required
 				/>

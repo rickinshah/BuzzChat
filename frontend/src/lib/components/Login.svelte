@@ -3,7 +3,7 @@
 	import ErrorModal from './ErrorModal.svelte';
 	import { validateField } from '../utils/validate';
 	import { passwordSchema, usernameSchema } from '../utils/validators';
-	import { triggerError } from '../../stores/modal';
+	import { triggerError, triggerInfo } from '../../stores/modal';
 	let showErrorModal: boolean = false;
 	let isSubmitting: boolean = false;
 	let errors: Record<string, string> = {};
@@ -42,6 +42,7 @@
 				data: formData,
 				onSuccess: (response) => {
 					localStorage.setItem('user', JSON.stringify(response.user));
+					triggerInfo('Login Successful');
 				}
 			});
 		} catch (error) {
