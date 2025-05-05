@@ -152,7 +152,7 @@
 			<button
 				type="submit"
 				disabled={isSubmitting}
-				class="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-medium text-white transition hover:cursor-pointer hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-600"
+				class="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-medium text-white transition hover:cursor-pointer hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 disabled:cursor-default disabled:bg-gray-600"
 			>
 				{#if isSubmitting}
 					<span class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
