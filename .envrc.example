@@ -1,0 +1,2 @@
+export DB_DSN="postgres://buzzchat:buzzchat@localhost/buzzchat?sslmode=disable"
+export REDIS_ADDR="redis://localhost:6379"
