@@ -1,2 +1,0 @@
-DROP SEQUENCE IF EXISTS table_id_seq;
-DROP FUNCTION IF EXISTS next_id();
