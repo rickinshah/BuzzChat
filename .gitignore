@@ -1,5 +1,5 @@
 .envrc
 bin/
 
-frontend/node_modules
-frontend/.svelte-kit
+node_modules
+.svelte-kit
