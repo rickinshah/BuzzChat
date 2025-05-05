@@ -41,6 +41,7 @@
 				endpoint: '/v1/auth/login',
 				method: 'POST',
 				data: formData,
+				credentials: 'include',
 				onSuccess: (response) => {
 					localStorage.setItem('user', JSON.stringify(response.user));
 					triggerInfo('Login Successful');
