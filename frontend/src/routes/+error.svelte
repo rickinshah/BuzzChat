@@ -14,7 +14,7 @@
 		<p class="mt-2 text-gray-400">The page you're looking for doesn't exist or was moved.</p>
 		<button
 			on:click={goHome}
-			class="mt-6 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+			class="mt-6 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none hover:cursor-pointer"
 		>
 			← Go back home
 		</button>
