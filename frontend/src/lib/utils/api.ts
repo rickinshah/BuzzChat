@@ -16,19 +16,7 @@ interface ApiCallOptions<T = unknown> {
     onError?: (error: any) => void;
 };
 
-type ApiConfig = {
-    protocol: "http" | "https";
-    host: string;
-    port: number;
-};
-
-const config: ApiConfig = {
-    protocol: "http",
-    host: "localhost",
-    port: 4000
-};
-
-export const BASE_URL = `${config.protocol}://${config.host}:${config.port}`
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export async function apiCall<T = unknown>({
     endpoint,

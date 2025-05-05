@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/RickinShah/BuzzChat/internal/data"
@@ -20,8 +21,9 @@ type config struct {
 	redis struct {
 		address string
 	}
-	port int
-	env  string
+	port    int
+	env     string
+	clients []string
 }
 
 type application struct {
@@ -38,7 +40,11 @@ func main() {
 	flag.StringVar(&cfg.redis.address, "redis-address", "redis://localhost:6379", "Redis Address")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|production)")
 
+	clients := flag.String("clients", "http://localhost:5173", "Client URLs for CORS")
+
 	flag.Parse()
+
+	cfg.clients = strings.Split(*clients, ",")
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
