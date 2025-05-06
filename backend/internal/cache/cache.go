@@ -8,7 +8,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func Set(rdb *redis.Client, key string, value any, ttl time.Duration) error {
+type RedisExecutor interface {
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
+}
+
+func Set(rdb RedisExecutor, key string, value any, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -17,6 +23,17 @@ func Set(rdb *redis.Client, key string, value any, ttl time.Duration) error {
 	defer cancel()
 
 	return rdb.Set(ctx, key, data, ttl).Err()
+}
+
+func SetNx(rdb RedisExecutor, key string, value any, ttl time.Duration) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return rdb.SetNX(ctx, key, data, ttl).Err()
 }
 
 func Get[T any](rdb *redis.Client, key string) (*T, bool, error) {
@@ -32,13 +49,17 @@ func Get[T any](rdb *redis.Client, key string) (*T, bool, error) {
 	}
 
 	var value T
+
 	if err := json.Unmarshal(data, &value); err != nil {
+		if value, ok := any(string(data)).(T); ok {
+			return &value, true, nil
+		}
 		return nil, false, err
 	}
 	return &value, true, nil
 }
 
-func Del(rdb *redis.Client, key string) error {
+func Del(rdb RedisExecutor, key string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 

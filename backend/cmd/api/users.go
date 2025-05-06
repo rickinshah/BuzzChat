@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/RickinShah/BuzzChat/internal/data"
+	"github.com/RickinShah/BuzzChat/internal/model"
 	"github.com/RickinShah/BuzzChat/internal/validator"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -32,7 +33,7 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.SetMarshalType(data.Frontend)
+	user.SetMarshalType(model.Frontend)
 
 	if err := app.writeJson(w, http.StatusOK, envelope{"user": user}, nil); err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -41,11 +42,11 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Username          string
-		Email             string
-		Name              pgtype.Text
-		Bio               pgtype.Text
-		PlaintextPassword string `json:"password"`
+		Username        string
+		Email           string
+		Name            pgtype.Text
+		Password        string
+		ConfirmPassword string
 	}
 
 	if err := app.readJson(w, r, &input); err != nil {
@@ -53,11 +54,10 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	user := data.NewUser(nil)
+	user := model.NewUser(nil)
 	user.Username = input.Username
 	user.Email = input.Email
 	user.Name = input.Name
-	user.Bio = input.Bio
 
 	v := validator.New()
 
@@ -66,12 +66,17 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if data.ValidatePasswordPlainText(v, input.PlaintextPassword); !v.Valid() {
+	if data.ValidatePasswordPlainText(v, input.Password); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	password, err := data.SetPassword(input.PlaintextPassword)
+	if data.ValidateConfirmPassword(v, input.Password, input.ConfirmPassword); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	password, err := data.SetPassword(input.Password)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -92,16 +97,68 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err = app.writeJson(w, http.StatusOK, envelope{"user": user}, nil); err != nil {
+	if err = app.writeJson(w, http.StatusOK, envelope{"message": "Account created succesfully!"}, nil); err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 }
 
 func (app *application) getProfileHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
-	user.SetMarshalType(data.Self)
+	user.SetMarshalType(model.Self)
 
 	if err := app.writeJson(w, http.StatusOK, envelope{"user": user}, nil); err != nil {
 		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) checkEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string
+	}
+
+	qs := r.URL.Query()
+	input.Email = app.readString(qs, "email", "")
+
+	v := validator.New()
+	if data.ValidateEmail(v, input.Email); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	_, err := app.models.Users.GetByEmail(input.Email)
+	if err == nil {
+		app.conflictResponse(w, r, "a user with this email already exists.")
+		return
+	}
+
+	if err := app.writeJson(w, http.StatusOK, nil, nil); err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}
+
+func (app *application) checkUsernameHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Username string
+	}
+
+	qs := r.URL.Query()
+	input.Username = app.readString(qs, "username", "")
+
+	v := validator.New()
+	if data.ValidateUsername(v, input.Username); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	_, err := app.models.Users.GetByUsername(input.Username)
+	if err == nil {
+		app.conflictResponse(w, r, "a user with this username already exists.")
+		return
+	}
+
+	if err := app.writeJson(w, http.StatusOK, nil, nil); err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
 	}
 }

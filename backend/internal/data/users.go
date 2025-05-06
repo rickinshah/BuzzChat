@@ -3,129 +3,24 @@ package data
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/RickinShah/BuzzChat/internal/cache"
 	"github.com/RickinShah/BuzzChat/internal/db"
+	"github.com/RickinShah/BuzzChat/internal/model"
 	"github.com/RickinShah/BuzzChat/internal/validator"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var AnonymousUser = &User{}
-
-type MarshalType uint8
-
-const (
-	Minimal MarshalType = iota
-	Frontend
-	Self
-	Full
-)
-
 var (
 	ErrDuplicateEmail    = errors.New("duplicate email")
 	ErrDuplicateUsername = errors.New("duplicate username")
 )
-
-type User struct {
-	db.User
-	marshalType MarshalType
-}
-
-func NewUser(user *db.User) *User {
-	if user == nil {
-		return &User{
-			marshalType: Full,
-		}
-	}
-	return &User{
-		User:        *user,
-		marshalType: Full,
-	}
-}
-
-func (u *User) IsAnonymous() bool {
-	return u == AnonymousUser
-}
-
-func (u *User) MarshalJSON() ([]byte, error) {
-	user := make(map[string]any, 11)
-	if u.marshalType >= Minimal {
-		user["userId"] = strconv.FormatInt(u.UserPid, 10)
-		user["username"] = u.Username
-		user["profilePic"] = u.ProfilePic
-		user["name"] = u.Name
-	}
-
-	if u.marshalType >= Frontend {
-		user["bio"] = u.Bio
-	}
-
-	if u.marshalType >= Self {
-		user["activated"] = u.Activated
-		user["createdAt"] = u.CreatedAt
-		user["updatedAt"] = u.UpdatedAt
-		user["email"] = u.Email
-	}
-
-	if u.marshalType >= Full {
-		user["passwordHash"] = u.PasswordHash
-		user["version"] = u.Version
-	}
-
-	return json.Marshal(user)
-}
-
-func (u *User) UnmarshalJSON(data []byte) error {
-	var temp struct {
-		UserID       string             `json:"userId"`
-		Username     string             `json:"username"`
-		ProfilePic   pgtype.Text        `json:"profilePic"`
-		Name         pgtype.Text        `json:"name"`
-		Bio          pgtype.Text        `json:"bio"`
-		Activated    bool               `json:"activated"`
-		CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-		UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
-		Email        string             `json:"email"`
-		PasswordHash []byte             `json:"passwordHash"`
-		Version      int32              `json:"version"`
-	}
-
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return err
-	}
-
-	userID, err := strconv.ParseInt(temp.UserID, 10, 64)
-	if err != nil {
-		return err
-	}
-
-	u.UserPid = userID
-	u.Username = temp.Username
-	u.ProfilePic = temp.ProfilePic
-	u.Name = temp.Name
-	u.Bio = temp.Bio
-	u.Activated = temp.Activated
-	u.CreatedAt = temp.CreatedAt
-	u.UpdatedAt = temp.UpdatedAt
-	u.Email = temp.Email
-	u.PasswordHash = temp.PasswordHash
-	u.Version = temp.Version
-
-	return nil
-}
-
-func (u *User) SetMarshalType(mt MarshalType) {
-	u.marshalType = mt
-}
 
 func SetPassword(plainTextPassword string) ([]byte, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(plainTextPassword), 12)
@@ -189,7 +84,7 @@ func ValidateConfirmPassword(v *validator.Validator, password string, confirmPas
 	v.Check(password == confirmPassword, "password", "doesn't match")
 }
 
-func ValidateUser(v *validator.Validator, user *User) {
+func ValidateUser(v *validator.Validator, user *model.User) {
 	ValidateUsername(v, user.Username)
 	ValidateEmail(v, user.Email)
 	ValidateBio(v, &user.Bio)
@@ -201,7 +96,7 @@ type UserModel struct {
 	Redis *redis.Client
 }
 
-func (m UserModel) Insert(user *User) error {
+func (m UserModel) Insert(user *model.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -228,16 +123,15 @@ func (m UserModel) Insert(user *User) error {
 	user.CreatedAt = row.CreatedAt
 	user.UpdatedAt = row.UpdatedAt
 	user.Version = row.Version
-	user.marshalType = Self
 
-	if err := m.SetCachedUser(user); err != nil {
+	if err := cache.SetCachedUser(m.Redis, user); err != nil {
 		logger.PrintInfo("failed to cache user:"+err.Error(), nil)
 	}
 
 	return nil
 }
 
-func (m UserModel) UpdatePassword(user *User) error {
+func (m UserModel) UpdatePassword(user *model.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -250,7 +144,7 @@ func (m UserModel) UpdatePassword(user *User) error {
 	row, err := m.DB.UpdatePassword(ctx, args)
 	if err != nil {
 		switch {
-		case errors.Is(err, sql.ErrNoRows):
+		case errors.Is(err, pgx.ErrNoRows):
 			return ErrEditConflict
 		default:
 			return err
@@ -259,14 +153,14 @@ func (m UserModel) UpdatePassword(user *User) error {
 	user.UpdatedAt = row.UpdatedAt
 	user.Version = row.Version
 
-	if err := m.SetCachedUser(user); err != nil {
+	if err := cache.SetCachedUser(m.Redis, user); err != nil {
 		logger.PrintInfo("failed to cache user:"+err.Error(), nil)
 	}
 
 	return nil
 }
 
-func (m UserModel) Update(user *User) error {
+func (m UserModel) Update(user *model.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -295,14 +189,14 @@ func (m UserModel) Update(user *User) error {
 	user.UpdatedAt = row.UpdatedAt
 	user.Version = row.Version
 
-	if err := m.SetCachedUser(user); err != nil {
+	if err := cache.SetCachedUser(m.Redis, user); err != nil {
 		logger.PrintInfo("failed to cache user:"+err.Error(), nil)
 	}
 
 	return nil
 }
 
-func (m UserModel) Delete(user *User) error {
+func (m UserModel) Delete(user *model.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -310,14 +204,14 @@ func (m UserModel) Delete(user *User) error {
 		return err
 	}
 
-	if err := m.DelCachedUser(user.Username); err != nil {
+	if err := cache.DelCachedUser(m.Redis, user.Username); err != nil {
 		logger.PrintInfo("failed to delete cached user:"+err.Error(), nil)
 	}
 	return nil
 }
 
-func (m UserModel) GetByUsername(username string) (*User, error) {
-	cachedUser, isCached, _ := m.GetCachedUser(username)
+func (m UserModel) GetByUsername(username string) (*model.User, error) {
+	cachedUser, isCached, _ := cache.GetCachedUser(m.Redis, username)
 	if isCached {
 		return cachedUser, nil
 	}
@@ -327,50 +221,67 @@ func (m UserModel) GetByUsername(username string) (*User, error) {
 
 	user, err := m.DB.GetUserByUsername(ctx, username)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
 
-	customUser := NewUser(&user)
+	customUser := model.NewUser(&user)
 
-	if err := m.SetCachedUser(customUser); err != nil {
+	if err := cache.SetCachedUser(m.Redis, customUser); err != nil {
 		logger.PrintInfo("failed to cache user:"+err.Error(), nil)
 	}
 
 	return customUser, nil
 }
 
-func (m UserModel) GetByEmailOrUsername(email string) (*User, error) {
+func (m UserModel) GetByEmail(email string) (*model.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	cachedUser, isCached, _ := m.GetCachedUser(email)
+	user, err := m.DB.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	customUser := model.NewUser(&user)
+
+	return customUser, nil
+}
+
+func (m UserModel) GetByEmailOrUsername(email string) (*model.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	cachedUser, isCached, _ := cache.GetCachedUser(m.Redis, email)
 	if isCached {
 		return cachedUser, nil
 	}
 
 	user, err := m.DB.GetUserByEmailOrUsername(ctx, email)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrRecordNotFound
 		}
 		return nil, err
 	}
-	customUser := NewUser(&user)
+	customUser := model.NewUser(&user)
 
-	if err = m.SetCachedUser(customUser); err != nil {
+	if err = cache.SetCachedUser(m.Redis, customUser); err != nil {
 		logger.PrintInfo("failed to cache user:"+err.Error(), nil)
 	}
 
 	return customUser, nil
 }
 
-func (m UserModel) GetByToken(tokenScope, tokenPlaintext string) (*User, error) {
+func (m UserModel) GetByToken(tokenScope, tokenPlaintext string) (*model.User, error) {
 	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
 
-	cachedUser, isCached, _ := m.GetCachedUserByToken(tokenScope, tokenHash[:])
+	cachedUser, isCached, _ := cache.GetCachedUserByToken(m.Redis, tokenScope, tokenHash[:])
 	if isCached {
 		return cachedUser, nil
 	}
@@ -390,53 +301,18 @@ func (m UserModel) GetByToken(tokenScope, tokenPlaintext string) (*User, error) 
 	user, err := m.DB.GetUserByToken(ctx, args)
 	if err != nil {
 		switch {
-		case errors.Is(err, sql.ErrNoRows):
+		case errors.Is(err, pgx.ErrNoRows):
 			return nil, ErrRecordNotFound
 		default:
 			return nil, err
 		}
 	}
 
-	customUser := NewUser(&user)
+	customUser := model.NewUser(&user)
 
-	if err = m.SetCachedUserByToken(tokenScope, tokenHash[:], customUser); err != nil {
+	if err = cache.SetCachedUserByToken(m.Redis, tokenScope, tokenHash[:], customUser.Username); err != nil {
 		logger.PrintInfo("failed to cache token:"+err.Error(), nil)
 	}
 
 	return customUser, nil
-}
-
-func (m UserModel) GetCachedUser(username string) (*User, bool, error) {
-	key := cacheKeyForUser(username)
-
-	return cache.Get[User](m.Redis, key)
-}
-
-func (m UserModel) SetCachedUser(user *User) error {
-	key := cacheKeyForUser(user.Username)
-
-	return cache.Set(m.Redis, key, user, time.Hour)
-}
-
-func (m UserModel) DelCachedUser(username string) error {
-	key := cacheKeyForUser(username)
-	return cache.Del(m.Redis, key)
-}
-
-func (m UserModel) SetCachedUserByToken(scope string, hash []byte, user *User) error {
-	key := cacheKeyForUserByToken(scope, hash)
-	return cache.Set(m.Redis, key, user, time.Hour)
-}
-
-func (m UserModel) GetCachedUserByToken(scope string, hash []byte) (*User, bool, error) {
-	key := cacheKeyForUserByToken(scope, hash)
-	return cache.Get[User](m.Redis, key)
-}
-
-func cacheKeyForUser(username string) string {
-	return "user:" + username
-}
-
-func cacheKeyForUserByToken(scope string, hash []byte) string {
-	return "token:" + scope + ":" + hex.EncodeToString(hash)
 }

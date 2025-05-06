@@ -1,4 +1,3 @@
-import { writable } from "svelte/store";
 import { goto } from "../../stores/navigation";
 import { triggerError } from "../../stores/modal";
 

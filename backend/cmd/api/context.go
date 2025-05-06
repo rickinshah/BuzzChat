@@ -4,20 +4,20 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/RickinShah/BuzzChat/internal/data"
+	"github.com/RickinShah/BuzzChat/internal/model"
 )
 
 type contextKey string
 
 const userContextKey = contextKey("user")
 
-func (app *application) contextSetUser(r *http.Request, user *data.User) *http.Request {
+func (app *application) contextSetUser(r *http.Request, user *model.User) *http.Request {
 	ctx := context.WithValue(r.Context(), userContextKey, user)
 	return r.WithContext(ctx)
 }
 
-func (app *application) contextGetUser(r *http.Request) *data.User {
-	user, ok := r.Context().Value(userContextKey).(*data.User)
+func (app *application) contextGetUser(r *http.Request) *model.User {
+	user, ok := r.Context().Value(userContextKey).(*model.User)
 	if !ok {
 		panic("missing user value in request context")
 	}

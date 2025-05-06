@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/RickinShah/BuzzChat/internal/validator"
+	"github.com/sony/sonyflake/v2"
 )
 
 type envelope map[string]any
@@ -127,4 +128,12 @@ func (app *application) readStringPath(r *http.Request, key string, defaultValue
 	}
 
 	return value
+}
+
+func (app *application) generateID() (int64, error) {
+	sf, err := sonyflake.New(sonyflake.Settings{})
+	if err != nil {
+		return 0, err
+	}
+	return sf.NextID()
 }

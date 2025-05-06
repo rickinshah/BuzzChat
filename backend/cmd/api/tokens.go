@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/RickinShah/BuzzChat/internal/data"
+	"github.com/RickinShah/BuzzChat/internal/model"
 	"github.com/RickinShah/BuzzChat/internal/validator"
 )
 
@@ -54,12 +55,12 @@ func (app *application) authenticationHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	token, err := app.models.Tokens.New(user.UserPid, 24*time.Hour, data.ScopeAuthentication)
+	token, err := app.models.Tokens.New(user.UserPid, 24*time.Hour, model.ScopeAuthentication)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	user.SetMarshalType(data.Self)
+	user.SetMarshalType(model.Self)
 
 	cookie := http.Cookie{
 		Name:        "auth_token",

@@ -8,22 +8,14 @@ import (
 	"time"
 
 	"github.com/RickinShah/BuzzChat/internal/db"
+	"github.com/RickinShah/BuzzChat/internal/model"
 	"github.com/RickinShah/BuzzChat/internal/validator"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
-const (
-	ScopeAuthentication = "authentication"
-)
-
-type Token struct {
-	db.Token
-	Plaintext string
-}
-
-func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
-	token := Token{
+func generateToken(userID int64, ttl time.Duration, scope string) (*model.Token, error) {
+	token := model.Token{
 		Token: db.Token{
 			UserID: userID,
 			Expiry: pgtype.Timestamptz{Time: time.Now().Add(ttl), Valid: true},
@@ -55,7 +47,7 @@ type TokenModel struct {
 	Redis *redis.Client
 }
 
-func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*model.Token, error) {
 	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
 		return nil, err
@@ -64,8 +56,10 @@ func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	args := db.InsertTokenParams(token.Token)
-	err = m.DB.InsertToken(ctx, args)
+	if token.Scope != model.ScopeRegistration {
+		args := db.InsertTokenParams(token.Token)
+		err = m.DB.InsertToken(ctx, args)
+	}
 	return token, err
 }
 

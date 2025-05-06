@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/RickinShah/BuzzChat/internal/data"
+	"github.com/RickinShah/BuzzChat/internal/model"
 	"github.com/RickinShah/BuzzChat/internal/validator"
 )
 
@@ -30,7 +31,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		if err != nil {
 			switch {
 			case errors.Is(err, http.ErrNoCookie):
-				r = app.contextSetUser(r, data.AnonymousUser)
+				r = app.contextSetUser(r, model.AnonymousUser)
 				next.ServeHTTP(w, r)
 				return
 			default:
@@ -49,7 +50,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 				HttpOnly: true,
 			}
 			http.SetCookie(w, &cookie)
-			r = app.contextSetUser(r, data.AnonymousUser)
+			r = app.contextSetUser(r, model.AnonymousUser)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -61,7 +62,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := app.models.Users.GetByToken(data.ScopeAuthentication, token)
+		user, err := app.models.Users.GetByToken(model.ScopeAuthentication, token)
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
@@ -73,7 +74,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 					HttpOnly: true,
 				}
 				http.SetCookie(w, &cookie)
-				r = app.contextSetUser(r, data.AnonymousUser)
+				r = app.contextSetUser(r, model.AnonymousUser)
 				next.ServeHTTP(w, r)
 			default:
 				app.serverErrorResponse(w, r, err)

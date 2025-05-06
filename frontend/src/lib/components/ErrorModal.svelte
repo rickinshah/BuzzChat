@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
-	export let errorMessage: string;
+	export let errorMessage: string | Object;
 	export let onClose: () => void;
 
 	let previousActive: HTMLElement | null = null;

@@ -13,6 +13,11 @@ SELECT user_pid, username, email, name, password_hash, bio, activated, profile_p
 FROM users
 WHERE email = $1 OR username = $1;
 
+-- name: GetUserByEmail :one
+SELECT user_pid, username, email, name, password_hash, bio, activated, profile_pic, created_at, updated_at, version
+FROM users
+WHERE email = $1;
+
 -- name: UpdateUser :one
 UPDATE users
 SET username = $3, email = $4, name = $5, bio = $6, activated = $7, profile_pic = $8, updated_at = now(), version = version + 1
