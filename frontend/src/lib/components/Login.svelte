@@ -127,7 +127,7 @@
 				{#if isSubmitting}
 					<span class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
 					></span>
-					<span>Logging in...</span>
+					<span></span>
 				{:else}
 					<span>Login</span>
 				{/if}
