@@ -202,7 +202,7 @@
 						<button
 							type="button"
 							on:click={() => (showPassword = !showPassword)}
-							class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors duration-200 hover:text-indigo-400 focus:outline-none"
+							class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors duration-200 hover:cursor-pointer hover:text-indigo-400 focus:outline-none"
 							aria-label={showPassword ? 'Hide password' : 'Show password'}
 						>
 							{#if showPassword}
@@ -230,7 +230,7 @@
 						<button
 							type="button"
 							on:click={() => (showConfirmPassword = !showConfirmPassword)}
-							class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors duration-200 hover:text-indigo-400 focus:outline-none"
+							class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors duration-200 hover:cursor-pointer hover:text-indigo-400 focus:outline-none"
 							aria-label={showPassword ? 'Hide password' : 'Show password'}
 						>
 							{#if showConfirmPassword}
@@ -272,7 +272,7 @@
 						<span
 							class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
 						></span>
-						<span>Submitting...</span>
+						<span></span>
 					{:else}
 						<span>Submit</span>
 					{/if}
