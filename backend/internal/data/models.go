@@ -19,11 +19,13 @@ var (
 type Models struct {
 	Users  *UserModel
 	Tokens *TokenModel
+	OTPs   *OTPModel
 }
 
 func NewModels(db *db.Queries, redis *redis.Client) Models {
 	return Models{
 		Users:  &UserModel{db, redis},
 		Tokens: &TokenModel{db, redis},
+		OTPs:   &OTPModel{db, redis},
 	}
 }

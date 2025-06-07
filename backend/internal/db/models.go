@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Otp struct {
+	UserPid   int64
+	CreatedAt pgtype.Timestamptz
+	SecretKey string
+	Expiry    pgtype.Timestamptz
+}
+
 type Token struct {
 	Hash   []byte
 	UserID int64

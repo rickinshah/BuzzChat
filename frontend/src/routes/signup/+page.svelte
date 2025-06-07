@@ -10,12 +10,12 @@
 	import { Eye, EyeOff, ArrowLeft } from 'lucide-svelte';
 	import { triggerError, triggerInfo } from '../../stores/modal';
 	import { goto } from '$app/navigation';
-	let isSubmitting: boolean = $state(false);
-	let isChecking: boolean = $state(false);
-	let step: number = $state(1);
-	let showPassword: boolean = $state(false);
-	let showConfirmPassword: boolean = $state(false);
-	let errorMessage: string = $state('');
+	let isSubmitting: boolean = false;
+	let isChecking: boolean = false;
+	let step: number = 1;
+	let showPassword: boolean = false;
+	let showConfirmPassword: boolean = false;
+	let errorMessage: string = '';
 	interface FormData {
 		email: string;
 		username: string;
@@ -24,13 +24,13 @@
 		confirmPassword: string;
 	}
 
-	let formData: FormData = $state({
+	let formData: FormData = {
 		email: '',
 		username: '',
 		name: '',
 		password: '',
 		confirmPassword: ''
-	});
+	};
 
 	const handleNextButton = async (): Promise<void> => {
 		errorMessage = '';

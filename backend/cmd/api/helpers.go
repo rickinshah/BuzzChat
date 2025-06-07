@@ -19,7 +19,6 @@ type envelope map[string]any
 
 func (app *application) writeJson(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
 	js, err := json.Marshal(data)
-
 	if err != nil {
 		return err
 	}
@@ -92,7 +91,6 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	}
 
 	i, err := strconv.Atoi(s)
-
 	if err != nil {
 		v.AddError(key, "must be an integer value")
 		return defaultValue
@@ -136,4 +134,15 @@ func (app *application) generateID() (int64, error) {
 		return 0, err
 	}
 	return sf.NextID()
+}
+
+func (app *application) background(fn func()) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+		fn()
+	}()
 }

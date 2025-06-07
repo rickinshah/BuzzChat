@@ -10,6 +10,7 @@ import (
 	"github.com/RickinShah/BuzzChat/internal/data"
 	"github.com/RickinShah/BuzzChat/internal/db"
 	"github.com/RickinShah/BuzzChat/internal/jsonlog"
+	"github.com/RickinShah/BuzzChat/internal/mailer"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -21,14 +22,23 @@ type config struct {
 	redis struct {
 		address string
 	}
-	port    int
-	env     string
-	clients []string
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
+	port          int
+	env           string
+	clients       []string
+	encryptionKey string
 }
 
 type application struct {
 	config config
 	logger *jsonlog.Logger
+	mailer mailer.Mailer
 	models data.Models
 }
 
@@ -38,7 +48,13 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://buzzchat:buzzchat@localhost/buzzchat?sslmode=disable", "Postgres DSN")
 	flag.StringVar(&cfg.redis.address, "redis-address", "redis://localhost:6379", "Redis Address")
+	flag.StringVar(&cfg.encryptionKey, "encryption-key", "abcdefghijklmnopqrstuvwxyzabcdef", "Redis Address")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|production)")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.gmail.com", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "no-reply@gmail.com", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "BuzzChat <no-reply@gmail.com>", "SMTP sender")
 
 	clients := flag.String("clients", "http://localhost:5173", "Client URLs for CORS")
 
@@ -67,8 +83,13 @@ func main() {
 	app := application{
 		config: cfg,
 		logger: logger,
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 		models: data.NewModels(db.New(dbPool), redis),
 	}
+
+	app.background(func() {
+		mailer.StartEmailWorker(&app.mailer, redis)
+	})
 
 	if err = app.serve(); err != nil {
 		logger.PrintFatal(err, nil)

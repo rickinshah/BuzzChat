@@ -12,5 +12,7 @@ func (app *application) routes() http.Handler {
 	router.HandleFunc("POST /v1/auth/login", app.authenticationHandler)
 	router.HandleFunc("GET /v1/users/check-email", app.checkEmailHandler)
 	router.HandleFunc("GET /v1/users/check-username", app.checkUsernameHandler)
+	router.HandleFunc("POST /v1/auth/otp", app.generateOtpHandler)
+	router.HandleFunc("POST /v1/auth/otp/validate", app.validateOtpHandler)
 	return app.enableCORS(app.authenticate(router))
 }

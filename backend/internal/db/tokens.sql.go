@@ -13,7 +13,8 @@ import (
 
 const deleteAllTokens = `-- name: DeleteAllTokens :exec
 DELETE FROM tokens
-WHERE scope = $1 AND user_id = $2
+WHERE scope = $1
+    AND user_id = $2
 `
 
 type DeleteAllTokensParams struct {
@@ -27,13 +28,25 @@ func (q *Queries) DeleteAllTokens(ctx context.Context, arg DeleteAllTokensParams
 }
 
 const getUserByToken = `-- name: GetUserByToken :one
-SELECT u.user_pid, u.username, u.email, u.name, u.password_hash, u.bio, u.activated, u.profile_pic,
-       u.created_at, u.updated_at, u.version
-FROM users u
-INNER JOIN tokens t ON u.user_pid = t.user_id
-WHERE t.hash = $1
-  AND t.scope = $2
-  AND t.expiry > $3
+SELECT
+    u.user_pid,
+    u.username,
+    u.email,
+    u.name,
+    u.password_hash,
+    u.bio,
+    u.activated,
+    u.profile_pic,
+    u.created_at,
+    u.updated_at,
+    u.version
+FROM
+    users u
+    INNER JOIN tokens t ON u.user_pid = t.user_id
+WHERE
+    t.hash = $1
+    AND t.scope = $2
+    AND t.expiry > $3
 `
 
 type GetUserByTokenParams struct {
@@ -63,7 +76,7 @@ func (q *Queries) GetUserByToken(ctx context.Context, arg GetUserByTokenParams) 
 
 const insertToken = `-- name: InsertToken :exec
 INSERT INTO tokens (Hash, user_id, expiry, scope)
-VALUES ($1, $2, $3, $4)
+    VALUES ($1, $2, $3, $4)
 `
 
 type InsertTokenParams struct {

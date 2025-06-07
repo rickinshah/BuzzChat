@@ -4,3 +4,4 @@ CREATE TABLE IF NOT EXISTS tokens (
     expiry timestamp(0) with time zone NOT NULL,
     scope text NOT NULL
 );
+
