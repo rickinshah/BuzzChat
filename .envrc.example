@@ -5,6 +5,6 @@ export SMTP_USERNAME=
 export SMTP_PASSWORD=
 export SMTP_HOST=smtp.gmail.com
 export SMTP_PORT=587
-export SMTP_SENDER='BuzzChat <no-reply@gmail.com'
+export SMTP_SENDER='BuzzChat <no-reply@gmail.com>'
 export ENCRYPTION_KEY=abcdefghijklmnopqrstuvwxyzabcdef
 export CLIENTS=

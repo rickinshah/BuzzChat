@@ -1,11 +1,11 @@
-{{define "subject"}}Welcome to BugBee!{{end}}
+{{define "subject"}}Welcome to BuzzChat!{{end}}
 
 {{define "plainBody"}}
 Hi,
 
-Thanks for signing up for a BugBee account. We're excited to have you on board!
+Thanks for signing up for a BuzzChat account. We're excited to have you on board!
 
-To activate your BugBee account please click the following line:
+To activate your BuzzChat account please click the following line:
 
 {{.url}}/users/activate?token={{.activationToken}}
 
@@ -13,7 +13,7 @@ Please note that this link will expire in 3 days and can only be used once
 
 Thanks,
 
-The BugBee Team
+The BuzzChat Team
 {{end}}
 
 {{define "htmlBody"}}
@@ -27,13 +27,13 @@ The BugBee Team
 
 <body>
     <p>Hi,</p>
-    <p>Thanks for signing up for a BugBee account. We're excited to have you on board!</p>
-    <p>To activate your BugBee account please click the following link:</p>
+    <p>Thanks for signing up for a BuzzChat account. We're excited to have you on board!</p>
+    <p>To activate your BuzzChat account please click the following link:</p>
     <code><a href="{{.url}}/users/activate?token={{.activationToken}}">
         Activate Account
     </a></code>
     <p>Thanks,</p>
-    <p>The BugBee Team</p>
+    <p>The BuzzChat Team</p>
 </body>
 
 </html>

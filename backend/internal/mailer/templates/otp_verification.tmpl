@@ -1,9 +1,9 @@
-{{define "subject"}}Login Verification Required for BugBee Account{{end}}
+{{define "subject"}}Login Verification Required for BuzzChat Account{{end}}
 
 {{define "plainBody"}}
 Dear {{.Name}},
 
-We have received a password reset request for your BugBee account. For security purposes, please verify your identity by providing the following One-Time Password (OTP).
+We have received a password reset request for your BuzzChat account. For security purposes, please verify your identity by providing the following One-Time Password (OTP).
 
 Your One-Time Password (OTP) verification code is: {{.Code}}
 
@@ -13,9 +13,9 @@ If you did not initiate this password reset request, please disregard this messa
 
 Do not forward or give this code to anyone.
 
-Thank you for using BugBee.
+Thank you for using BuzzChat.
 Best regards,
-BugBee
+BuzzChat
 
 This email was sent to {{.Mail}}
 {{end}}
@@ -62,7 +62,7 @@ This email was sent to {{.Mail}}
         }
 
         .otp {
-            background: linear-gradient(to right, #00bc69 0, #00bc88 50%, #00bca8 100%);
+            background: linear-gradient(to bottom right, #2d3748, #1a202c, #000000);
             margin: 0 auto;
             width: max-content;
             padding: 0 10px;
@@ -95,12 +95,12 @@ This email was sent to {{.Mail}}
 <body>
 <div class="container">
     <div class="header">
-        <a>Prove Your BugBee Identity</a>
+        <a>Prove Your BuzzChat Identity</a>
     </div>
     <br />
     <strong>Dear {{.Name}},</strong>
     <p>
-        We have received a password reset request for your BugBee account. For
+        We have received a password reset request for your BuzzChat account. For
         security purposes, please verify your identity by providing the
         following One-Time Password (OTP).
         <br />
@@ -117,20 +117,20 @@ This email was sent to {{.Mail}}
         <strong>Do not forward or give this code to anyone.</strong>
         <br />
         <br />
-        <strong>Thank you for using BugBee.</strong>
+        <strong>Thank you for using BuzzChat.</strong>
         <br />
         <br />
         Best regards,
         <br />
-        <strong>BugBee</strong>
+        <strong>BuzzChat</strong>
     </p>
 
     <hr style="border: none; border-top: 0.5px solid #131111" />
     <div class="footer">
         <p>This email can't receive replies.</p>
 <!--        <p>-->
-<!--            For more information about BugBee and your account, visit-->
-<!--            <strong>BugBee</strong>-->
+<!--            For more information about BuzzChat and your account, visit-->
+<!--            <strong>BuzzChat</strong>-->
 <!--        </p>-->
     </div>
 </div>
@@ -142,7 +142,7 @@ This email was sent to {{.Mail}}
       </span>
     </div>
 <!--    <div class="email-info">-->
-<!--        <a href="/">BugBee</a> | [Address]-->
+<!--        <a href="/">BuzzChat</a> | [Address]-->
 <!--        | [Address] - [Zip Code/Pin Code], [Country Name]-->
 <!--    </div>-->
 <!--    <div class="email-info">-->
